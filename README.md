@@ -26,14 +26,15 @@ The loop, one click at a time:
 
 1. **Pantry** — click it, pick an ingredient. You carry one thing at a time.
 2. **Chopping Board** — click with a choppable ingredient, then click 3 times to chop it.
-3. **Stove** — click with pasta, broth or batter to start a pot. It cooks in 5 seconds — collect it before it burns, 4 seconds later.
+3. **Stove** — click with pasta, broth or batter to start a pot. It cooks in 5 seconds — collect it before it burns, 4 seconds later, or it is lost: a red ring shrinks around a finished pot as the burn closes in.
 4. **Plating Counter** — click with a prepared item to put it on the plate (up to 3 items).
 5. **Serve Window** — click with a finished dish to serve the matching order.
 
 Serving fast pays a tip (up to +50%), and consecutive serves build a combo
-that multiplies your coins. A missed order costs one reputation heart; lose
+that multiplies your coins — the live streak shows in the top bar. A missed order costs one reputation heart; lose
 all three hearts, or let the 3-minute shift run out, and the day is over.
-Your rating is 1–3 ladles by coins earned.
+Your rating is 1–3 ladles by coins earned. In the last minute the dinner
+rush hits and orders arrive faster.
 
 ## Controls
 
@@ -52,7 +53,7 @@ all sound and music is synthesised with WebAudio — there are no asset files.
 - `game/index.html` — the page, loads the modules.
 - `game/src/main.js` — the game loop, state machine, input, and scoring.
 - `game/src/recipes.js` — the menu: ingredients, dishes, orders, tips.
-- `game/src/kitchen.js` — stations, the chef's walk, every interaction.
+- `game/src/kitchen.js` — stations, the chef's walk, every interaction, plus the stove's burn clock (`burnFrac`).
 - `game/src/render.js` — the kitchen, the food, the chef, the order board.
 - `game/src/audio.js` — synthesised WebAudio sounds and the music loop.
 - `game/src/shots.js` — the staged states behind the screenshots.

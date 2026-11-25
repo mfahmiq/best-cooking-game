@@ -72,21 +72,31 @@ export function sendChefTo(k, x, y) {
   k.chef.moving = true;
 }
 
-// Tick the stove pots. A pot finishes cooking, then burns if ignored.
+// Tick the stove pots. A pot finishes cooking, then burns if ignored:
+// the clock keeps running while it sits 'done', so a forgotten pot is
+// lost 4 seconds after it is ready (before this fix a done pot was
+// skipped here and could never burn, so the stove had no pressure).
 export function tickPots(k, dt, onDone, onBurnt) {
   for (let i = 0; i < k.pots.length; i++) {
     const pot = k.pots[i];
-    if (!pot || pot.state !== 'cooking') continue;
+    if (!pot || pot.state === 'burnt') continue;
     pot.t += dt;
-    if (pot.t >= COOK_SECONDS && pot.state === 'cooking') {
+    if (pot.state === 'cooking' && pot.t >= COOK_SECONDS) {
       pot.state = 'done';
       if (onDone) onDone(i);
-    } else if (pot.t >= COOK_SECONDS + BURN_SECONDS) {
+    } else if (pot.state === 'done' && pot.t >= COOK_SECONDS + BURN_SECONDS) {
       pot.state = 'burnt';
       if (onBurnt) onBurnt(i);
     }
   }
   if (k.toastT > 0) k.toastT -= dt;
+}
+
+// How close a finished pot is to burning, 0 to 1: the renderer draws it
+// as a shrinking red ring, so a pot about to burn reads at a glance.
+export function burnFrac(pot) {
+  if (!pot || pot.state !== 'done') return 0;
+  return Math.min(1, (pot.t - COOK_SECONDS) / BURN_SECONDS);
 }
 
 // --- Interactions: each returns a short event string for sound + toast. ---

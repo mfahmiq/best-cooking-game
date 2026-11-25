@@ -3,7 +3,7 @@
 // All art is original canvas shapes; all food is drawn, never emoji.
 
 import { INGREDIENTS, preparedName } from './recipes.js';
-import { STATIONS, CHOPS_NEEDED, COOK_SECONDS, BURN_SECONDS } from './kitchen.js';
+import { STATIONS, CHOPS_NEEDED, COOK_SECONDS, BURN_SECONDS, burnFrac } from './kitchen.js';
 
 export const W = 1200;
 export const H = 800;
@@ -233,7 +233,7 @@ function drawFloorAndWalls(ctx) {
   ctx.strokeRect(60, 30, 120, 130);
 }
 
-function drawStationBase(ctx, s, fill, label) {
+function drawStationBase(ctx, s, fill, label, labelColor) {
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
   rr(ctx, s.x + 4, s.y + 6, s.w, s.h, 12);
   ctx.fill();
@@ -244,7 +244,9 @@ function drawStationBase(ctx, s, fill, label) {
   ctx.lineWidth = 3;
   rr(ctx, s.x, s.y, s.w, s.h, 12);
   ctx.stroke();
-  text(ctx, label, s.x + s.w / 2, s.y + s.h - 14, 15, '#fff', 'center', true);
+  // Light stations (the plating counter is cream) need a dark label:
+  // white text on cream was unreadable in the screenshots.
+  text(ctx, label, s.x + s.w / 2, s.y + s.h - 14, 15, labelColor || '#fff', 'center', true);
 }
 
 export function drawKitchen(ctx, game) {
@@ -342,6 +344,16 @@ export function drawKitchen(ctx, game) {
         drawFoodIcon(ctx, { id: pot.item.id, prep: pot.item.id === 'batter' ? 'fry' : 'boil' }, cx, cy, 16);
         ctx.fillStyle = '#2e7d32';
         text(ctx, 'READY!', cx, cy - 42, 13, '#2e7d32', 'center', true);
+        // Burn ring: red, shrinking as the pot nears burning, so a
+        // forgotten pot screams before it is lost.
+        const bf = burnFrac(pot);
+        if (bf > 0) {
+          ctx.strokeStyle = bf > 0.6 ? '#ff5a3c' : '#e8a13c';
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 32, -Math.PI / 2, -Math.PI / 2 + (1 - bf) * Math.PI * 2);
+          ctx.stroke();
+        }
       } else {
         text(ctx, 'BURNT!', cx, cy - 42, 13, '#ff5a3c', 'center', true);
         text(ctx, 'click to clear', cx, cy + 44, 11, '#fff', 'center');
@@ -353,7 +365,7 @@ export function drawKitchen(ctx, game) {
 
   // Plating counter: the white plate, showing each prepared item on it.
   const pl = STATIONS.plate;
-  drawStationBase(ctx, pl, '#f3ede0', 'PLATING COUNTER');
+  drawStationBase(ctx, pl, '#f3ede0', 'PLATING COUNTER', PAL.ink);
   ctx.fillStyle = '#fff';
   ctx.beginPath();
   ctx.ellipse(pl.x + pl.w / 2, pl.y + 48, 92, 30, 0, 0, Math.PI * 2);
@@ -482,11 +494,13 @@ export function drawKitchen(ctx, game) {
 
 // --- Order board, HUD, screens. ------------------------------------------
 export function drawOrders(ctx, game) {
-  // Tickets hang in a row under the HUD: the order board.
+  // Tickets hang in a row under the HUD: the order board. They start at
+  // x=200 so the first ticket never sits on top of the wall window (the
+  // old x=60 left the window frame crossing the first ticket).
   const y = 100;
-  const w = 200;
-  const gap = 14;
-  const x0 = 60;
+  const w = 190;
+  const gap = 12;
+  const x0 = 200;
   game.orders.forEach((order, i) => {
     const x = x0 + i * (w + gap);
     const frac = Math.max(0, order.patience / order.patienceMax);
@@ -501,9 +515,10 @@ export function drawOrders(ctx, game) {
     ctx.lineWidth = urgent ? 3 : 2;
     rr(ctx, x, y, w, 92, 10);
     ctx.stroke();
-    // Ticket header: dish + customer.
+    // Ticket header: dish + customer. The name alone (no "for") keeps
+    // long dish names from colliding with the customer at this width.
     text(ctx, order.dish.name, x + 12, y + 16, 16, PAL.ink, 'left', true);
-    text(ctx, 'for ' + order.customer, x + w - 12, y + 16, 12, '#8a7a5a', 'right');
+    text(ctx, order.customer, x + w - 12, y + 16, 12, '#8a7a5a', 'right');
     // Component icons: what the dish needs.
     order.dish.needs.forEach((need, j) => {
       drawFoodIcon(ctx, need, x + 28 + j * 44, y + 46, 16);
@@ -548,6 +563,10 @@ export function drawHud(ctx, game) {
   }
   // Coins and reputation hearts, right side.
   text(ctx, '🪙 ' + game.coins + ' coins', 1050, 30, 22, '#ffd98a', 'center', true);
+  // Combo: consecutive serves multiply coins, so show the streak live.
+  if (game.combo >= 2) {
+    text(ctx, 'COMBO x' + game.combo, 880, 30, 20, '#ff9d5c', 'right', true);
+  }
   let hx = 1010;
   for (let i = 0; i < 3; i++) {
     ctx.fillStyle = i < game.hearts ? '#ff5a6e' : 'rgba(255,255,255,0.25)';

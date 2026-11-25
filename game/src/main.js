@@ -45,6 +45,7 @@ function newGame() {
     combo: 0,
     bestCombo: 0,
     shift: 1,
+    rushAnnounced: false, // the dinner-rush callout fires once, at 2:00 left
     nextOrderIn: 2,
     rng: mulberry32(seed),
     pendingAction: null, // { station } executed when the chef arrives
@@ -364,15 +365,25 @@ function frame(now) {
         }
       }
     }
-    // Stove pots cook and burn.
-    tickPots(k, dt,
-      () => playSfx('cook-done'),
-      () => {
-        setToast(k, 'Something burned on the stove!', '#ff8a70');
-        playSfx('burnt');
-      });
-    // Shift timer ends the day.
-    if (game.elapsed >= game.shiftLength) endShift();
+    // Stove pots cook and burn — only while the shift is still running,
+    // so no burnt toast or sound fires after the day already ended.
+    if (game.state === 'playing') {
+      tickPots(k, dt,
+        () => playSfx('cook-done'),
+        () => {
+          setToast(k, 'Something burned on the stove!', '#ff8a70');
+          playSfx('burnt');
+        });
+    }
+    // Dinner rush: one callout when the last minute begins, so the
+    // pressure ramp reads instead of creeping in unnoticed.
+    if (game.state === 'playing' && !game.rushAnnounced && game.elapsed >= 120) {
+      game.rushAnnounced = true;
+      setToast(k, 'DINNER RUSH! Orders are coming faster!', '#ff9d5c');
+      playSfx('new-order');
+    }
+    // Shift timer ends the day (once — never re-fire after it ended).
+    if (game.state === 'playing' && game.elapsed >= game.shiftLength) endShift();
   }
 
   // The chef walks; on arrival the queued station action fires.
